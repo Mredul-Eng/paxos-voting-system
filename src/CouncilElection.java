@@ -48,7 +48,7 @@ public class CouncilElection {
 
     }
 
-    private static void runProposers(String proposer, int proposerId) {
+    public static void runProposers(String proposer, int proposerId) {
         if(electionCompleted) return;
         try{
             long voteNumber = System.currentTimeMillis() + proposerId; // unique vote number based on current time
@@ -150,7 +150,7 @@ public class CouncilElection {
 
     //this method handles each council member's behaviour.
     //An acceptor connect in a specific port and response to specific proposals from proposers
-    private static void runAcceptors(int memberId) {
+    public static void runAcceptors(int memberId) {
         int port = 8000 + memberId;
         try(ServerSocket serverSocket = new ServerSocket(port)){
             System.out.println("Member " + memberId + " is listening on port " + port);
@@ -196,10 +196,11 @@ public class CouncilElection {
     }
 
     //this method simulate real world behaviours and network issues for council members in the election system
-    private static void simulateMembersBehaviour(int memberId, PrintWriter out) {
+    public static void simulateMembersBehaviour(int memberId, PrintWriter out) {
         try{
             if(memberId == 2){
                 Thread.sleep(random.nextInt(5000) + 1000); // delayed response from 1 to 6 seconds randomly where network connection is slow
+                System.out.println("Member M" + memberId + " is delayed between 1 to 6 seconds");
             } else if (memberId == 3) {
                 //there is 50% chance not to response and message will drop for member 3
                 if(random.nextBoolean()){
@@ -208,7 +209,7 @@ public class CouncilElection {
                 }
             } else if (memberId >= 4 && memberId <= 9) {
                 Thread.sleep(random.nextInt(3000)); // random delays from 0 to 3 seconds for member 4 to 9
-
+                System.out.println("Member M" + memberId + " respond after 3 seconds delay");
             }
             //simulate going offline for any members (chance for going offline is 20%)
             if(random.nextInt(10) < 2){
