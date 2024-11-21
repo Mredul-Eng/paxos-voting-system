@@ -62,8 +62,8 @@ This project implements a distributed fault-tolerant council election system usi
 The system includes three predefined test scenarios:
 
 1. **Multiple Simultaneous Proposals**
-  - Two proposers (e.g., M1 and M2) send proposals simultaneously.
-  - Tests how the Paxos protocol handles conflicts and ensures consensus.
+   - Two proposers (e.g., M1 and M2) send proposals simultaneously.
+   - Tests how the Paxos protocol handles conflicts and ensures consensus.
 
 2. **Immediate Response for All Members**
    - Simulates all council members responding immediately without delays or message drops.
