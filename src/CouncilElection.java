@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class CouncilElection {
     private static final ReentrantLock lock = new ReentrantLock(); // used to synchronized access for shared resources like proposals
     private static boolean electionCompleted = false; // check if all council member response immediately or not
-    private static final Map<Integer, Acceptor> acceptors = new ConcurrentHashMap<>(); // map the acceptors bt their ID(member id)
+    public static final Map<Integer, Acceptor> acceptors = new ConcurrentHashMap<>(); // map the acceptors bt their ID(member id)
     private static final Random random = new Random(); // used to introduce random delays, message drops and offline behaviour
     private static final Map<String, Integer> votesCount = new ConcurrentHashMap<>(); // track number of votes for each candidate
 
@@ -53,6 +53,7 @@ public class CouncilElection {
         try{
             long voteNumber = System.currentTimeMillis() + proposerId; // unique vote number based on current time
             Proposal proposal = new Proposal(voteNumber, proposer);
+            System.out.println("Current Time[" + System.currentTimeMillis() + "]: " + proposer + " is sending proposal with vote number: " + voteNumber);
 
             //store promises received from acceptors
             List<Promise> promises = new ArrayList<>();
@@ -73,14 +74,15 @@ public class CouncilElection {
                     //if the response starts with promise, then the acceptor promised not to accept the proposal with lower proposal number
                     if(response != null && response.startsWith("promise")){
                         promises.add(new Promise(true, proposal));
+                        System.out.println("Current Time[" + System.currentTimeMillis() + "]: " + proposer + " received a promise from M" + i);
                     }
                 } catch (IOException e) {
-                    System.out.println("Member M" + i + " did not respond or offline.");
+                    System.out.println("Current Time[" + System.currentTimeMillis() + "]: Member M" + i + " did not respond or offline.");
                 }
             }
             //if the number of promises less than quorum, then the proposer can not proceed further to the accept phase and return early
             if(promises.size() < QUORUM){
-                System.out.println(proposer + " did not received enough promises..");
+                System.out.println("Current Time[" + System.currentTimeMillis() + "]: "+ proposer + " did not received enough promises (only received " + promises.size() + " promises)");
                 return;
             }
 
@@ -101,9 +103,10 @@ public class CouncilElection {
                     if(response != null && response.startsWith("accepted")){
                         countOfAcceptance += 1;
                         votesCount.put(proposer, votesCount.getOrDefault(proposer, 0) + 1); //increment vote count
+                        System.out.println("Current Time[" + System.currentTimeMillis() + "]: " + proposer + " received a acceptance from M" + i);
                     }
                 }catch (IOException e) {
-                    System.out.println("Member M" + i + " did not respond or offline.");
+                    System.out.println("Current Time[" + System.currentTimeMillis() + "]: Member M" + i + " did not respond or offline.");
                 }
             }
             //check if count of acceptance is greater than or equal to Quorum, then the proposal will be accepted.
@@ -112,17 +115,15 @@ public class CouncilElection {
                 //check election is completed or not
                 if(!electionCompleted){
                     if(countOfAcceptance >= QUORUM){
-                        System.out.println(proposer + " has enough acceptances");
                         printVoteCounts(); // print all votes count for all candidate
                         String electedCandidate = getMajorVotesValue(); // get the candidate who has major votes
-
                         if(electedCandidate != null){
-                            System.out.println(electedCandidate + " is elected as council president");
+                            System.out.println("Current Time[" + System.currentTimeMillis() + "]: " + electedCandidate + " is elected as council president");
                             electionCompleted = true; // Set election as completed
                         }
                     }
                     else {
-                        System.out.println(proposer + " is rejected for council president election");
+                        System.out.println("Current Time[" + System.currentTimeMillis() + "]: " + proposer + " is rejected for council president election");
                     }
                 }
             }finally {
@@ -163,12 +164,14 @@ public class CouncilElection {
 
                     //read incoming message
                     String proposedMessage = in.readLine(); //read proposal that sent by the proposer
-                    System.out.println("Member M" + memberId + " received the proposed message: " + proposedMessage);
                     String[] proposalParts = proposedMessage.split(":");
                     String operation = proposalParts[0]; // extract operation type from proposal
                     Proposal proposal = new Proposal(Long.parseLong(proposalParts[1]), proposalParts[2]); //create a new proposal
-
+                    //simulate each member behaviour
                     simulateMembersBehaviour(memberId, out);
+
+                    //simulateImmediateResponseForAllMembers(memberId, out);
+
                     //handle Prepare phase
                     //if the operation is Prepare, the acceptors check if they can promise to accept the proposal or not
                     if(operation.equalsIgnoreCase("prepare")){
@@ -195,26 +198,32 @@ public class CouncilElection {
 
     }
 
+    //simulate all members behaviour for immediate response
+    private static void simulateImmediateResponseForAllMembers(int memberId, PrintWriter out) {
+        System.out.println("Member M" + memberId + " is responding immediately.");
+
+    }
+
     //this method simulate real world behaviours and network issues for council members in the election system
     public static void simulateMembersBehaviour(int memberId, PrintWriter out) {
         try{
-            if(memberId == 2){
-                Thread.sleep(random.nextInt(5000) + 1000); // delayed response from 1 to 6 seconds randomly where network connection is slow
-                System.out.println("Member M" + memberId + " is delayed between 1 to 6 seconds");
+            if(memberId == 1){
+                System.out.println("Member M" + memberId + " is response immediately.");
+            }
+            else if(memberId == 2){
+                System.out.println("Member M" + memberId + " is going offline.");
+                out.println("offline");
             } else if (memberId == 3) {
                 //there is 50% chance not to response and message will drop for member 3
                 if(random.nextBoolean()){
                     System.out.println("Member M" + memberId + " is not responding (message dropped)");
-                    return;
                 }
-            } else if (memberId >= 4 && memberId <= 9) {
-                Thread.sleep(random.nextInt(3000)); // random delays from 0 to 3 seconds for member 4 to 9
-                System.out.println("Member M" + memberId + " respond after 3 seconds delay");
-            }
-            //simulate going offline for any members (chance for going offline is 20%)
-            if(random.nextInt(10) < 2){
-                System.out.println("Member M" + memberId + " is went offline");
-                out.println("offline");
+            } else if (memberId >= 4 && memberId <= 7) {
+                Thread.sleep(random.nextInt(2000)); // random delays from 0 to 2 seconds for member 4 to 9
+                System.out.println("Member M" + memberId + " respond after a small delay in 2 seconds.");
+            } else if (memberId == 8 || memberId == 9) {
+                Thread.sleep(random.nextInt(5000)); // random 0 to 5 seconds delay for member 8 or 9
+                System.out.println("Member M" + memberId + " respond after a large delay upto 5 seconds.");
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -228,6 +237,7 @@ public class CouncilElection {
             System.out.println(entry.getKey() + " gets: " + entry.getValue() + " votes");
         }
     }
+
 }
 
 

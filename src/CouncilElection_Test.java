@@ -1,70 +1,67 @@
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 public class CouncilElection_Test {
-    private static final int NUMBER_OF_MEMBERS = 9;
 
     public static void main(String[] args) {
 
-        //Test scenario 1 for Multiple proposals M1, M2, M3
-        System.out.println("Testing Multiple Simultaneous Proposals for Council Election...");
+        //start all the acceptors
+        startAcceptors();
+
+        //Test scenario 1 for two proposers(M1, M2) sending proposals at the same time
+        System.out.println("\n===Testing Multiple Simultaneous Proposals for Council Election===\n");
         runSimultaneousProposals();
 
         //Test scenario 2 for immediate response for all members
-        System.out.println("\nTesting Immediate Response...");
+        System.out.println("\n===Testing Immediate Response for All Members===\n");
         runImmediateResponse();
 
-        //Test scenario 3 for simulate behaviour of M2 to M9 as their response times are vary
-        System.out.println("\nTesting Response with Delays or Going Offline...");
+        //Test scenario 3 for simulate behaviour of M1 to M9 as their response times are vary
+        System.out.println("\n===Testing Responses for Each Member with immediate response, Delays or Going Offline===\n");
         runDelayedOrNoResponse();
     }
 
-    private static void runDelayedOrNoResponse() {
-        ExecutorService executorService = Executors.newFixedThreadPool(NUMBER_OF_MEMBERS - 1);
-        for(int i = 2; i <= NUMBER_OF_MEMBERS; i++) {
+    private static void startAcceptors() {
+        for(int i = 1; i <= 9; i++){
+            CouncilElection.acceptors.put(i, new Acceptor("M" + i)); //put acceptors with specific member id
             int memberId = i;
-            executorService.submit(()->{
-               CouncilElection.runAcceptors(memberId);
-                System.out.println("Simulating Behaviour for Member M" + memberId);
-            });
+            new Thread(() -> CouncilElection.runAcceptors(memberId)).start(); // start a new thread for each acceptor and run each acceptor for separate thread, allowing it to run concurrently with other threads.
+
         }
-        executorService.shutdown();
+    }
+
+    private static void runDelayedOrNoResponse() {
+        try{
+            Thread.sleep(2000);
+            try{
+                //allow 3 members to propose
+                for(int i = 1; i <= 3; i++){
+                    int proposerId = i;
+                    new Thread(() -> CouncilElection.runProposers("M" + proposerId, proposerId)).start();
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }catch (InterruptedException e){
+            e.printStackTrace();
+        }
+
     }
 
     //simulate immediate responses for all members
     private static void runImmediateResponse() {
-        ExecutorService executorService = Executors.newFixedThreadPool(NUMBER_OF_MEMBERS);
-        for(int i = 1; i <= NUMBER_OF_MEMBERS; i++) {
-            int memberId = i;
-            executorService.submit(()->{
-                if(memberId == 1){
-                    CouncilElection.runProposers("M" + memberId, memberId);
-                    System.out.println("Member M" + memberId + " is responding immediately..");
-                }
-                else{
-                    CouncilElection.runProposers("M" + memberId, memberId);
-                    System.out.println("Member M" + memberId + " is available for response..");
-                }
-            });
-        }
-        executorService.shutdown();
-        //as member M1 response immediately, so among all members M1 gives response immediately
-//        new Thread(()-> CouncilElection.runProposers("M1", 1)).start();
-//        System.out.println("M1 response immediately!");
-
+        //run proposers for two members and simulate immediate response for all members.
+        runSimultaneousProposals();
     }
 
     //test the Paxos implementation behaviour when multiple proposer try to send propose at the same time
     private static void runSimultaneousProposals() {
-        ExecutorService executorService = Executors.newFixedThreadPool(3); //create a thread pool with a fixed thread number (3) for simulating simultaneous proposals
-        for(int i = 1; i <= 3; i++) {
-            int proposalId = i;
-            //for each iteration, a new task is submitted to executor service
-            System.out.println("Member M" + proposalId + " is sending proposal!");
-            executorService.submit(() -> CouncilElection.runProposers("M" + proposalId, proposalId));
+        try{
+            Thread.sleep(2000);
+            for(int i = 1; i <= 2; i++){
+                int proposerId = i;
+                new Thread(()-> CouncilElection.runProposers("M" + proposerId, proposerId)).start();
+            }
+        }catch(InterruptedException e){
+            e.printStackTrace();
         }
-        executorService.shutdown(); // after all task submitted, shut down executor
     }
-
 }
 
